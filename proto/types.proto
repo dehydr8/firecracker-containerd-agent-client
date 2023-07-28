@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+option go_package = "./proto";
+
+message ExtraData {
+	bytes JsonSpec = 1;
+	google.protobuf.Any RuncOptions = 2;
+	uint32 StdinPort = 3;
+	uint32 StdoutPort = 4;
+	uint32 StderrPort = 5;
+}
+
+message StateRequest {
+    string ID = 1;
+    string ExecID = 2;
+}
+
+message StateResponse {
+    bool IsOpen = 1;
+}
+
+message AttachRequest {
+    string ID = 1;
+    string ExecID = 2;
+    uint32 StdinPort = 3;
+    uint32 StdoutPort = 4;
+    uint32 StderrPort = 5;
+}
+
+message MountDriveRequest {
+    string DriveID = 1;
+    string DestinationPath = 2;
+    string FilesytemType = 3;
+    repeated string Options = 4;
+}
+
+message UnmountDriveRequest {
+    string DriveID = 1;
+}

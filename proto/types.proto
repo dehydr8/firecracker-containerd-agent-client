@@ -2,14 +2,14 @@ syntax = "proto3";
 
 import "google/protobuf/any.proto";
 
-option go_package = "./proto";
+option go_package = "proto";
 
 message ExtraData {
-	bytes JsonSpec = 1;
-	google.protobuf.Any RuncOptions = 2;
-	uint32 StdinPort = 3;
-	uint32 StdoutPort = 4;
-	uint32 StderrPort = 5;
+    bytes JsonSpec = 1;
+    google.protobuf.Any RuncOptions = 2;
+    uint32 StdinPort = 3;
+    uint32 StdoutPort = 4;
+    uint32 StderrPort = 5;
 }
 
 message StateRequest {

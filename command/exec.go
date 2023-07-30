@@ -19,14 +19,16 @@ import (
 )
 
 const (
-	serviceName = "containerd.task.v2.Task"
-	methodName  = "Exec"
+	serviceName     = "containerd.task.v2.Task"
+	execMethodName  = "Exec"
+	startMethodName = "Start"
 )
 
 type ExecCmd struct {
 	address     string
 	containerId string
 	execId      string
+	cwd         string
 	stdout      string
 	stderr      string
 }
@@ -45,6 +47,7 @@ func (p *ExecCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.stdout, "exec_id", "", "Execution ID")
 	f.StringVar(&p.stdout, "stdout", "", "Standard Output")
 	f.StringVar(&p.stderr, "stderr", "", "Standard Error")
+	f.StringVar(&p.cwd, "cwd", "/", "Current working directory")
 }
 
 func (p *ExecCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -83,7 +86,7 @@ func (p *ExecCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 			GID: 0,
 		},
 		Args: f.Args(),
-		Cwd:  "/",
+		Cwd:  p.cwd,
 	}
 
 	a, _ := json.Marshal(cmd)
@@ -116,14 +119,28 @@ func (p *ExecCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	res := &emptypb.Empty{}
 
-	err := client.Call(context.Background(), serviceName, methodName, req, res)
+	err := client.Call(context.Background(), serviceName, execMethodName, req, res)
 
 	if err != nil {
-		log.Printf("Failure in Call: %s\n", err)
+		log.Printf("Failure in exec call: %s\n", err)
 		return subcommands.ExitFailure
 	}
 
-	log.Println("You can now start the process using the Execution ID")
+	startReq := &shim.StartRequest{
+		ID:     p.containerId,
+		ExecID: p.execId,
+	}
+
+	startRes := &shim.StartResponse{}
+
+	err = client.Call(context.Background(), serviceName, startMethodName, startReq, startRes)
+
+	if err != nil {
+		log.Printf("Failure in start call: %s\n", err)
+		return subcommands.ExitFailure
+	}
+
+	log.Printf("Command executed with PID: %d\n", startRes.Pid)
 
 	return subcommands.ExitSuccess
 }

@@ -49,7 +49,8 @@ var requestMapping = map[string]Pair{
 }
 
 type CallCmd struct {
-	address string
+	cid     int
+	port    int
 	service string
 	method  string
 }
@@ -57,23 +58,19 @@ type CallCmd struct {
 func (*CallCmd) Name() string     { return "call" }
 func (*CallCmd) Synopsis() string { return "Call a TTRPC service method" }
 func (*CallCmd) Usage() string {
-	return `call [-address addr] <json>:
+	return `call --service <service> --method <method> <json>:
 	Call TTRPC service.
   `
 }
 
 func (p *CallCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.address, "address", "", "Server address")
+	f.IntVar(&p.cid, "cid", 0, "Vsock Context ID")
+	f.IntVar(&p.port, "port", 10789, "Vsock Port")
 	f.StringVar(&p.service, "service", "", "Service name")
 	f.StringVar(&p.method, "method", "", "Method name")
 }
 
 func (p *CallCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if len(p.address) <= 0 {
-		log.Printf("No address defined")
-		return subcommands.ExitFailure
-	}
-
 	if len(p.service) <= 0 {
 		log.Printf("No service defined")
 		return subcommands.ExitFailure
@@ -93,7 +90,7 @@ func (p *CallCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitFailure
 	}
 
-	c, cleanup := client.New(p.address)
+	c, cleanup := client.New(uint32(p.cid), uint32(p.port))
 	defer cleanup()
 
 	req := val.req

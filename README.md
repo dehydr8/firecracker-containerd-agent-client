@@ -4,8 +4,8 @@ CLI client for interacting with the [Firecracker containerd agent](https://githu
 ## Build
 ```bash
 # build directly
-go build
+CGO_ENABLED=0 go build
 
 # build with docker
-docker run -it --rm -v $(pwd):/project -w /project golang:1.17 go build
+docker run -it --rm -v $(pwd):/project -w /project golang:1.21 CGO_ENABLED=0 go build
 ```

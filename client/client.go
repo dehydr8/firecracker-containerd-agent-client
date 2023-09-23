@@ -2,13 +2,13 @@ package client
 
 import (
 	"log"
-	"net"
 
 	"github.com/containerd/ttrpc"
+	"github.com/dehydr8/firecracker-containerd-agent-client/util"
 )
 
-func New(addr string, opts ...ttrpc.ClientOpts) (*ttrpc.Client, func()) {
-	conn, err := net.Dial("tcp", addr)
+func New(cid, port uint32, opts ...ttrpc.ClientOpts) (*ttrpc.Client, func()) {
+	conn, err := util.VSockDial(cid, port)
 
 	if err != nil {
 		log.Fatalf("Failure dialing: %s", err)

@@ -45,6 +45,7 @@ type ExecCmd struct {
 	io          bool
 	uid         int
 	gid         int
+	priv        bool
 
 	vsockPortMu      sync.Mutex
 	vsockIOPortCount uint32
@@ -78,7 +79,7 @@ func (p *ExecCmd) SetFlags(f *flag.FlagSet) {
 	f.IntVar(&p.cid, "cid", 0, "Vsock Context ID")
 	f.IntVar(&p.port, "port", 10789, "Vsock Port")
 	f.StringVar(&p.containerId, "container_id", "", "Container ID")
-	f.StringVar(&p.stdout, "exec_id", "", "Execution ID")
+	f.StringVar(&p.execId, "exec_id", "", "Execution ID")
 	f.StringVar(&p.stdout, "stdout", "", "Standard Output")
 	f.StringVar(&p.stderr, "stderr", "", "Standard Error")
 	f.BoolVar(&p.tty, "tty", false, "Terminal")
@@ -86,6 +87,7 @@ func (p *ExecCmd) SetFlags(f *flag.FlagSet) {
 	f.IntVar(&p.uid, "uid", 0, "User")
 	f.IntVar(&p.gid, "gid", 0, "Group")
 	f.StringVar(&p.cwd, "cwd", "/", "Current working directory")
+	f.BoolVar(&p.priv, "priv", false, "All Capabilities")
 }
 
 func (p *ExecCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -113,14 +115,25 @@ func (p *ExecCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 
 	log.Printf("Execution ID: %s\n", p.execId)
 
+	caps := defaultUnixCaps()
+
+	if p.priv {
+		caps = privUnixCaps()
+	}
+
 	cmd := &specs.Process{
 		User: specs.User{
 			UID: uint32(p.uid),
 			GID: uint32(p.gid),
 		},
-		Args:         f.Args(),
-		Cwd:          p.cwd,
-		Capabilities: &specs.LinuxCapabilities{},
+		Args: f.Args(),
+		Cwd:  p.cwd,
+		Capabilities: &specs.LinuxCapabilities{
+			Bounding:  caps,
+			Permitted: caps,
+			Effective: caps,
+		},
+		NoNewPrivileges: false,
 	}
 
 	if p.tty {

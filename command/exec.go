@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"os"
-	"sync"
 	"time"
 
 	shim "github.com/containerd/containerd/api/runtime/task/v2"
@@ -46,25 +46,12 @@ type ExecCmd struct {
 	uid         int
 	gid         int
 	priv        bool
-
-	vsockPortMu      sync.Mutex
-	vsockIOPortCount uint32
 }
 
-func (s *ExecCmd) nextVSockPort() uint32 {
-	s.vsockPortMu.Lock()
-	defer s.vsockPortMu.Unlock()
-
-	port := minVsockIOPort + s.vsockIOPortCount
-	if port == math.MaxUint32 {
-		// given we use 3 ports per container, there would need to
-		// be about 1431652098 containers spawned in this VM for
-		// this to actually happen in practice.
-		panic("overflow of vsock ports")
-	}
-
-	s.vsockIOPortCount++
-	return port
+func (s *ExecCmd) randomVSockPorts() (uint32, uint32, uint32) {
+	p := rand.Int31n(int32(math.MaxInt32) - int32(minVsockIOPort) - 3)
+	p += int32(minVsockIOPort)
+	return uint32(p), uint32(p + 1), uint32(p + 2)
 }
 
 func (*ExecCmd) Name() string     { return "exec" }
@@ -142,15 +129,17 @@ func (p *ExecCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 
 	a, _ := json.Marshal(cmd)
 
+	stdinPort, stdoutPort, stderrPort := p.randomVSockPorts()
+
 	// Firecracker agent expects the spec to be wrapped in ExtraData
 	spec := &proto.ExtraData{
 		RuncOptions: &anypb.Any{
 			TypeUrl: "",
 			Value:   a,
 		},
-		StdinPort:  p.nextVSockPort(),
-		StdoutPort: p.nextVSockPort(),
-		StderrPort: p.nextVSockPort(),
+		StdinPort:  stdinPort,
+		StdoutPort: stdoutPort,
+		StderrPort: stderrPort,
 	}
 
 	marshalled_spec, _ := types.MarshalAny(spec)
